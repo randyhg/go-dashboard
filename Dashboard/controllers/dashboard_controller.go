@@ -1,42 +1,27 @@
 package controllers
 
 import (
-	"fmt"
 	"github.com/kataras/iris/v12"
 	"go-dashboard/Dashboard/services"
 	"go-dashboard/model"
 	"math"
+	"strconv"
 )
 
 type dashboardcontroller struct{}
 
 var DashboardController = new(dashboardcontroller)
-var Today = "today"
-var ThisMonth = "this_month"
-var ThisYear = "this_year"
 
 func (d *dashboardcontroller) GetSales(ctx iris.Context) {
 	var strFilter model.StrFilter
-	var start_date string
-	var end_date string
-	var start_dateAgo string
-	var end_dateAgo string
-	if err := ctx.ReadJSON(&strFilter); err != nil {
+	if err := ctx.ReadForm(&strFilter); err != nil {
 		model.FailWithDetailed(err, "Failed to parse JSON Body", ctx)
 		return
 	}
-	switch strFilter.Filter {
-	case Today:
-		start_date, end_date = services.GetStartAndEndTimeForToday()
-		start_dateAgo, end_dateAgo = services.GetYesterday(start_date, end_date)
-	case ThisMonth:
-		start_date, end_date = services.GetStartAndEndTimeForThisMonth()
-		start_dateAgo, end_dateAgo = services.Get30DaysAgo(start_date, end_date)
-	case ThisYear:
-		start_date, end_date = services.GetStartAndEndTimeForThisYear()
-		start_dateAgo, end_dateAgo = services.GetLastYearStartAndEnd(start_date, end_date)
-	default:
-		model.FailWithMessage("Out of range request", ctx)
+
+	filterName, start_date, end_date, start_dateAgo, end_dateAgo, err := services.SwitchCase(strFilter.Filter)
+	if err != nil {
+		model.FailWithMessage(err.Error(), ctx)
 		return
 	}
 
@@ -50,38 +35,27 @@ func (d *dashboardcontroller) GetSales(ctx iris.Context) {
 	if math.IsNaN(percentage) {
 		percentage = float64(0)
 	}
+
 	data := iris.Map{
-		"sales":    sales,
-		"increase": percentage,
-		"status":   increaseOrDecrease,
+		"value":              sales,
+		"increasePercentage": strconv.FormatFloat(percentage, 'f', 2, 64),
+		"increaseType":       increaseOrDecrease,
+		"filter":             filterName,
 	}
 
 	model.OkWithData(data, ctx)
 }
 
 func (d *dashboardcontroller) GetRevenue(ctx iris.Context) {
-	//var filter model.Filter
 	var strFilter model.StrFilter
-	var start_date string
-	var end_date string
-	var start_dateAgo string
-	var end_dateAgo string
-	if err := ctx.ReadJSON(&strFilter); err != nil {
+	if err := ctx.ReadForm(&strFilter); err != nil {
 		model.FailWithDetailed(err, "Failed to parse JSON Body", ctx)
 		return
 	}
-	switch strFilter.Filter {
-	case Today:
-		start_date, end_date = services.GetStartAndEndTimeForToday()
-		start_dateAgo, end_dateAgo = services.GetYesterday(start_date, end_date)
-	case ThisMonth:
-		start_date, end_date = services.GetStartAndEndTimeForThisMonth()
-		start_dateAgo, end_dateAgo = services.Get30DaysAgo(start_date, end_date)
-	case ThisYear:
-		start_date, end_date = services.GetStartAndEndTimeForThisYear()
-		start_dateAgo, end_dateAgo = services.GetLastYearStartAndEnd(start_date, end_date)
-	default:
-		model.FailWithMessage("Out of range request", ctx)
+
+	filterName, start_date, end_date, start_dateAgo, end_dateAgo, err := services.SwitchCase(strFilter.Filter)
+	if err != nil {
+		model.FailWithMessage(err.Error(), ctx)
 		return
 	}
 
@@ -90,67 +64,57 @@ func (d *dashboardcontroller) GetRevenue(ctx iris.Context) {
 		model.FailWithDetailed(err, "Failed get Revenues data", ctx)
 		return
 	}
+	revenues, err = services.FormatCurrency(revenues)
+	if err != nil {
+		model.FailWithDetailed(err, "Failed to format Revenue to Rupiah", ctx)
+		return
+	}
 
 	percentage, increaseOrDecrease := services.DashboardService.GetRevenueIncreaseDecrease(start_date, end_date, start_dateAgo, end_dateAgo)
 	if math.IsNaN(percentage) {
 		percentage = float64(0)
 	}
+
 	data := iris.Map{
-		"revenues": revenues,
-		"increase": percentage,
-		"status":   increaseOrDecrease,
+		"value":              revenues,
+		"increasePercentage": strconv.FormatFloat(percentage, 'f', 2, 64),
+		"increaseType":       increaseOrDecrease,
+		"filter":             filterName,
 	}
 
 	model.OkWithData(data, ctx)
 }
 
 func (d *dashboardcontroller) GetCustomers(ctx iris.Context) {
-	//
-	var filter model.Filter
-	if err := ctx.ReadJSON(&filter); err != nil {
+	var strFilter model.StrFilter
+	if err := ctx.ReadForm(&strFilter); err != nil {
 		model.FailWithDetailed(err, "Failed to parse JSON Body", ctx)
 		return
 	}
 
-	customers, err := services.DashboardService.GetCustomersService(filter)
+	filterName, start_date, end_date, start_dateAgo, end_dateAgo, err := services.SwitchCase(strFilter.Filter)
+	if err != nil {
+		model.FailWithMessage(err.Error(), ctx)
+		return
+	}
+
+	customers, err := services.DashboardService.GetCustomersService(start_date, end_date)
 	if err != nil {
 		model.FailWithDetailed(err, "Failed get Revenues data", ctx)
 		return
 	}
-	model.OkWithData(customers, ctx)
-}
 
-func (d *dashboardcontroller) GetRecentSales(ctx iris.Context) {
-	//
-	var strFilter model.StrFilter
-	if err := ctx.ReadJSON(&strFilter); err != nil {
-		model.FailWithDetailed(err, "Failed to parse JSON Body", ctx)
-		return
+	percentage, increaseOrDecrease := services.DashboardService.GetCustomerIncreaseDecrease(start_date, end_date, start_dateAgo, end_dateAgo)
+	if math.IsNaN(percentage) {
+		percentage = float64(0)
 	}
-	switch strFilter.Filter {
-	case "Today":
-		start_time, end_time := services.GetStartAndEndTimeForToday()
-		fmt.Println(start_time)
-		fmt.Println(end_time)
-	case "This month":
-		start_time, end_time := services.GetStartAndEndTimeForThisMonth()
-		fmt.Println(start_time)
-		fmt.Println(end_time)
-	case "This year":
-		start_time, end_time := services.GetStartAndEndTimeForThisYear()
-		fmt.Println(start_time)
-		fmt.Println(end_time)
-	default:
-		model.FailWithMessage("Out of range request", ctx)
-	}
-	//start_time, end_time := services.GetStartAndEndTimeForToday()
-	//fmt.Println(start_time)
-	//fmt.Println(end_time)
-	//var count int64
-	//util.Master().Model(model.Customers{}).Where("created_at BETWEEN ? AND ?", start_time, end_time).Count(&count)
-	//fmt.Println(count, "==================")
-}
 
-func (d *dashboardcontroller) GetTopSelling(ctx iris.Context) {
-	//
+	data := iris.Map{
+		"value":              customers,
+		"increasePercentage": strconv.FormatFloat(percentage, 'f', 2, 64),
+		"increaseType":       increaseOrDecrease,
+		"filter":             filterName,
+	}
+
+	model.OkWithData(data, ctx)
 }

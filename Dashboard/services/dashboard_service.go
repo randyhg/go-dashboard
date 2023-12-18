@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"go-dashboard/model"
 	"go-dashboard/util"
+	"strconv"
 	"time"
 )
 
 type dashboardservice struct{}
 
 var DashboardService = new(dashboardservice)
+var Today = "today"
+var ThisMonth = "this_month"
+var ThisYear = "this_year"
 
 func (d *dashboardservice) GetSalesService(startDate, endDate string) (sales int64, err error) {
 	if err := util.Master().Model(model.Sales{}).Where("date BETWEEN ? AND ?", startDate, endDate).Count(&sales).Error; err != nil {
@@ -20,7 +24,7 @@ func (d *dashboardservice) GetSalesService(startDate, endDate string) (sales int
 }
 
 func (d *dashboardservice) GetSalesIncreaseDecrease(startDate1, endDate1, startDate2, endDate2 string) (percentageChange float64, increaseOrDecrease string) {
-	increaseOrDecrease = "Decrease"
+	increaseOrDecrease = "decrease"
 	var today int64
 	util.Master().Table("sales").Where("date BETWEEN ? AND ?", startDate1, endDate1).Count(&today)
 
@@ -29,10 +33,10 @@ func (d *dashboardservice) GetSalesIncreaseDecrease(startDate1, endDate1, startD
 	if yesterday == 0 && today > 0 {
 		percentageChange = 100
 	} else {
-		percentageChange = float64(today-yesterday) / float64(yesterday) * 100
+		percentageChange = float64(today-yesterday)/float64(yesterday)*100 - 100
 	}
 	if percentageChange >= 0 {
-		increaseOrDecrease = "Increase"
+		increaseOrDecrease = "increase"
 	}
 	return percentageChange, increaseOrDecrease
 }
@@ -46,7 +50,7 @@ func (d *dashboardservice) GetRevenuesService(startDate, endDate string) (revenu
 }
 
 func (d *dashboardservice) GetRevenueIncreaseDecrease(startDate1, endDate1, startDate2, endDate2 string) (percentageChange float64, increaseOrDecrease string) {
-	increaseOrDecrease = "Decrease"
+	increaseOrDecrease = "decrease"
 	var today int64
 	util.Master().Model(model.Sales{}).Select("SUM(grand_total) AS revenues").Where("date BETWEEN ? AND ?", startDate1, endDate1).Scan(&today)
 
@@ -55,20 +59,38 @@ func (d *dashboardservice) GetRevenueIncreaseDecrease(startDate1, endDate1, star
 	if yesterday == 0 && today > 0 {
 		percentageChange = 100
 	} else {
-		percentageChange = float64(today-yesterday) / float64(yesterday) * 100
+		percentageChange = float64(today-yesterday)/float64(yesterday)*100 - 100
 	}
 	if percentageChange >= 0 {
-		increaseOrDecrease = "Increase"
+		increaseOrDecrease = "increase"
 	}
 	return percentageChange, increaseOrDecrease
 }
 
-func (d *dashboardservice) GetCustomersService(filter model.Filter) (customers int64, err error) {
-	if err := util.Master().Model(model.Customers{}).Where("created_at BETWEEN ? AND ?", filter.StartDate, filter.EndDate).Count(&customers).Error; err != nil {
+func (d *dashboardservice) GetCustomersService(startDate, endDate string) (customers int64, err error) {
+	if err := util.Master().Model(model.Customers{}).Where("created_at BETWEEN ? AND ?", startDate, endDate).Count(&customers).Error; err != nil {
 		fmt.Println(err)
 		return 0, err
 	}
 	return customers, nil
+}
+
+func (d *dashboardservice) GetCustomerIncreaseDecrease(startDate1, endDate1, startDate2, endDate2 string) (percentageChange float64, increaseOrDecrease string) {
+	increaseOrDecrease = "decrease"
+	var today int64
+	util.Master().Model(model.Customers{}).Where("created_at BETWEEN ? AND ?", startDate1, endDate1).Count(&today)
+
+	var yesterday int64
+	util.Master().Model(model.Customers{}).Where("created_at BETWEEN ? AND ?", startDate2, endDate2).Count(&yesterday)
+	if yesterday == 0 && today > 0 {
+		percentageChange = 100
+	} else {
+		percentageChange = float64(today-yesterday)/float64(yesterday)*100 - 100
+	}
+	if percentageChange >= 0 {
+		increaseOrDecrease = "increase"
+	}
+	return percentageChange, increaseOrDecrease
 }
 
 func (d *dashboardservice) GetRecentSalesService(filter model.Filter) {
@@ -115,4 +137,79 @@ func GetLastYearStartAndEnd(start_date, end_date string) (string, string) {
 	startLastYear := startDate.AddDate(-1, 0, 0)
 	endLastYear := endDate.AddDate(-1, 0, 0)
 	return startLastYear.Format("2006-01-02 15:04:05"), endLastYear.Format("2006-01-02 15:04:05")
+}
+
+func SwitchCase(strFilter string) (filterName, start_date, end_date, start_dateAgo, end_dateAgo string, err error) {
+	switch strFilter {
+	case Today:
+		filterName = "Today"
+		start_date, end_date = GetStartAndEndTimeForToday()
+		start_dateAgo, end_dateAgo = GetYesterday(start_date, end_date)
+	case ThisMonth:
+		filterName = "This Month"
+		start_date, end_date = GetStartAndEndTimeForThisMonth()
+		start_dateAgo, end_dateAgo = Get30DaysAgo(start_date, end_date)
+	case ThisYear:
+		filterName = "This Year"
+		start_date, end_date = GetStartAndEndTimeForThisYear()
+		start_dateAgo, end_dateAgo = GetLastYearStartAndEnd(start_date, end_date)
+	default:
+		return "", "", "", "", "", fmt.Errorf("Out of range request")
+	}
+	return
+}
+
+func FormatCurrency(amount string) (string, error) {
+	amountFloat, err := strconv.ParseFloat(amount, 64)
+	if err != nil {
+		return "", err
+	}
+
+	amountFormatted := strconv.FormatFloat(amountFloat, 'f', -1, 64)
+
+	result := "Rp " + addThousandSeparator(amountFormatted)
+
+	return result, nil
+}
+
+func addThousandSeparator(s string) string {
+	parts := splitByDecimalPoint(s)
+
+	parts[0] = addCommas(parts[0])
+
+	return combineWithDecimalPoint(parts)
+}
+
+func splitByDecimalPoint(s string) []string {
+	parts := []string{"", ""}
+
+	decimalPointIndex := len(s)
+	for i, c := range s {
+		if c == '.' || c == ',' {
+			decimalPointIndex = i
+			break
+		}
+	}
+
+	parts[0] = s[:decimalPointIndex]
+	if decimalPointIndex < len(s) {
+		parts[1] = s[decimalPointIndex+1:]
+	}
+
+	return parts
+}
+
+func combineWithDecimalPoint(parts []string) string {
+	if parts[1] != "" {
+		return parts[0] + "." + parts[1]
+	}
+	return parts[0]
+}
+
+func addCommas(s string) string {
+	n := len(s)
+	if n <= 3 {
+		return s
+	}
+	return addCommas(s[:n-3]) + "," + s[n-3:]
 }

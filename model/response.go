@@ -32,7 +32,7 @@ func OkWithMessage(message string, ctx iris.Context) {
 }
 
 func OkWithData(data interface{}, ctx iris.Context) {
-	Result(SUCCESS, data, "ok", ctx)
+	Result(SUCCESS, data, "success", ctx)
 }
 
 func OkWithDetailed(data interface{}, message string, ctx iris.Context) {
@@ -40,7 +40,7 @@ func OkWithDetailed(data interface{}, message string, ctx iris.Context) {
 }
 
 func Fail(ctx iris.Context) {
-	Result(ERROR, map[string]interface{}{}, "not ok", ctx)
+	Result(ERROR, map[string]interface{}{}, "failed", ctx)
 }
 
 func FailWithMessage(message string, ctx iris.Context) {

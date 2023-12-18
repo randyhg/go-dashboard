@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/core/router"
 	"go-dashboard/Dashboard/controllers"
 )
 
@@ -12,8 +13,11 @@ func RegisterRoutes(app *iris.Application) {
 			"code": 200,
 		})
 	})
-	app.Get("/sales", controllers.DashboardController.GetSales)
-	app.Get("/revenues", controllers.DashboardController.GetRevenue)
-	app.Get("/customers", controllers.DashboardController.GetCustomers)
-	app.Get("/recent_sales", controllers.DashboardController.GetRecentSales)
+	apiLara(app.Party("api"))
+}
+
+func apiLara(router router.Party) {
+	router.Post("/sales", controllers.DashboardController.GetSales)
+	router.Post("/revenue", controllers.DashboardController.GetRevenue)
+	router.Post("/customers", controllers.DashboardController.GetCustomers)
 }
