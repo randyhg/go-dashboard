@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/kataras/iris/v12"
-	"go-dashboard/Dashboard/services"
+	"go-dashboard/Ferwindo/services"
 	"go-dashboard/model"
 	"math"
 	"strconv"

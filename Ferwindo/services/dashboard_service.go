@@ -59,7 +59,7 @@ func (d *dashboardservice) GetRevenueIncreaseDecrease(startDate1, endDate1, star
 	if yesterday == 0 && today > 0 {
 		percentageChange = 100
 	} else {
-		percentageChange = float64(today-yesterday)/float64(yesterday)*100 - 100
+		percentageChange = float64(today-yesterday) / float64(yesterday) * 100
 	}
 	if percentageChange >= 0 {
 		increaseOrDecrease = "increase"

@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"go-dashboard/Dashboard/app"
+	"go-dashboard/Ferwindo/app"
 	"go-dashboard/config"
 	"go-dashboard/util"
 	"os"

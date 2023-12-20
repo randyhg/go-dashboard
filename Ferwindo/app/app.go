@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 	"github.com/kataras/iris/v12"
-	"go-dashboard/Dashboard/routes"
+	"go-dashboard/Ferwindo/routes"
 	"go-dashboard/config"
 	"net"
 	"os"

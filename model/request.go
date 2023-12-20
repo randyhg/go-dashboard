@@ -8,3 +8,8 @@ type Filter struct {
 type StrFilter struct {
 	Filter string `json:"filter"`
 }
+
+type Pagination struct {
+	Length int `json:"length" form:"length"`
+	Start  int `json:"start" form:"start"`
+}
