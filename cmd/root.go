@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"go-dashboard/Ferwindo/app"
 	"go-dashboard/config"
 	"go-dashboard/util"
@@ -47,7 +46,6 @@ func init() {
 }
 
 func start(cmd *cobra.Command, args []string) {
-	fmt.Println("Tes")
 	config.Init()
 	util.Init()
 	app.IrisInit()

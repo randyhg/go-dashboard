@@ -93,8 +93,21 @@ func (d *dashboardservice) GetCustomerIncreaseDecrease(startDate1, endDate1, sta
 	return percentageChange, increaseOrDecrease
 }
 
-func (d *dashboardservice) GetRecentSalesService(filter model.Filter) {
-
+func (d *dashboardservice) GetTopSellingService(start_date, end_date string) ([]model.TopSelling, error) {
+	var topSelling []model.TopSelling
+	if err := util.Master().Table("sale_lines AS sl").
+		Select("p.product_image AS preview, p.name AS name, sl.unit_price price, SUM(sl.quantity) AS sold, SUM(sl.subtotal) AS revenue").
+		Joins("INNER JOIN products AS p ON p.id = sl.product_id").
+		Joins("INNER JOIN sales AS s ON s.id = sl.sale_id").
+		Where("s.date BETWEEN ? AND ?", start_date, end_date).
+		Group("preview, name, price").
+		Order("revenue DESC").
+		Limit(5).
+		Scan(&topSelling).Error; err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return topSelling, nil
 }
 
 func GetStartAndEndTimeForToday() (string, string) {

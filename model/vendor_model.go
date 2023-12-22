@@ -19,3 +19,11 @@ type Company struct {
 	Address   string `gorm:"not null" json:"address"`
 	ShortName string `gorm:"not null" json:"short_name"`
 }
+
+type TopSelling struct {
+	Preview string  `json:"preview"`
+	Name    string  `json:"name"`
+	Price   float64 `json:"price"`
+	Sold    int     `json:"sold"`
+	Revenue float64 `json:"revenue"`
+}

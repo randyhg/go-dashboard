@@ -22,6 +22,7 @@ func apiLara(router router.Party) {
 	router.Post("/sales", controllers.DashboardController.GetSales)
 	router.Post("/revenue", controllers.DashboardController.GetRevenue)
 	router.Post("/customers", controllers.DashboardController.GetCustomers)
+	router.Post("/top_sellings", controllers.DashboardController.GetTopSelling)
 
 }
 

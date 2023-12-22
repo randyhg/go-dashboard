@@ -118,3 +118,24 @@ func (d *dashboardcontroller) GetCustomers(ctx iris.Context) {
 
 	model.OkWithData(data, ctx)
 }
+
+func (d *dashboardcontroller) GetTopSelling(ctx iris.Context) {
+	var strFilter model.StrFilter
+	if err := ctx.ReadForm(&strFilter); err != nil {
+		model.FailWithDetailed(err, "Failed to parse JSON Body", ctx)
+		return
+	}
+
+	_, start_date, end_date, _, _, err := services.SwitchCase(strFilter.Filter)
+	if err != nil {
+		model.FailWithMessage(err.Error(), ctx)
+		return
+	}
+
+	list, err := services.DashboardService.GetTopSellingService(start_date, end_date)
+	if err != nil {
+		model.FailWithDetailed(err, "Failed get Top Sellings data", ctx)
+		return
+	}
+	model.OkWithData(list, ctx)
+}
